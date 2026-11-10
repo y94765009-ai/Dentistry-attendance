@@ -531,7 +531,7 @@ const LOCATION_MAX_AGE_MS = 3 * 60 * 1000;
 // أوقات التسجيل بالدقائق من منتصف الليل (بتوقيت القاهرة) — للعرض فقط، والسيرفر هو الحكم
 const WINDOWS = {
   'حضور':   { start: 8 * 60 + 30,  end: 10 * 60 + 30, startAr: '٨:٣٠ صباحًا', startEn: '8:30 AM' },
-  'انصراف': { start: 15 * 60, end: 17 * 60 + 30, startAr: '٣:٠٠ مساءً', startEn: '3:00 PM' }
+  'انصراف': { start: 15 * 60, end: 17 * 60, startAr: '٣:٠٠ مساءً', startEn: '3:00 PM' }
 };
 
 // true = زر الإدارة ظاهر للجميع (الحماية بمفتاح الإدارة على السيرفر). false = مخفي ويظهر فقط بالرابط #admin أو على جهاز الأدمن
@@ -841,6 +841,7 @@ function friendlyError(data) {
     NO_LOCATION: L('يلزم السماح بالوصول إلى الموقع الجغرافي لإتمام التسجيل.', 'Location access is required to complete registration.'),
     NO_CONSENT: L('يلزم الموافقة على إقرار استخدام الموقع الجغرافي أولًا.', 'You must first agree to the location-use statement.'),
     BAD_EMAIL: L('البريد الإلكتروني غير صحيح. يُرجى التأكد من كتابته.', 'The email address is not valid. Please check it.'),
+    DEVICE_TAKEN: L('تعذّر إتمام التسجيل من هذا الجهاز. يُرجى التسجيل من جهازك الشخصي، أو التواصل مع الإدارة.', 'Registration could not be completed from this device. Please register from your own device, or contact the administration.'),
     BAD_NID: L('الرقم القومي يجب أن يكون ١٤ رقمًا. يُرجى التأكد من كتابته.', 'The national ID must be 14 digits. Please check it.'),
     MISSING_NAME: L('يُرجى إدخال الاسم.', 'Please enter your name.'),
     NOT_MEMBER: L('الرقم القومي غير مسجّل ضمن أعضاء الكلية. يُرجى التواصل مع الإدارة.', 'This national ID is not registered among the college members. Please contact the administration.'),
