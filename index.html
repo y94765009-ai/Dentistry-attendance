@@ -161,6 +161,8 @@ dialog::backdrop{background:rgba(17,33,67,.6)}
 .adm-head{display:flex;flex-wrap:wrap;gap:12px;align-items:center;justify-content:space-between;margin-bottom:16px}
 .adm-title{margin:0;font-size:22px;font-weight:700}
 .adm-sub{margin:0;color:var(--ink-soft);font-size:14px}
+.adm-day{display:flex;gap:8px;align-items:center;margin-top:8px;font-size:14px;color:var(--ink-soft)}
+.adm-day .input{width:auto;min-width:0;padding:6px 10px;min-height:0}
 .stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin-bottom:16px}
 .stat{background:var(--surface);border-radius:14px;padding:14px 16px;border:1px solid var(--line)}
 .stat__n{display:block;font-size:30px;font-weight:700;line-height:1.2;font-variant-numeric:tabular-nums}
@@ -457,6 +459,7 @@ body.show-admin #adminBtn{display:inline-flex}
     <div>
       <h1 class="adm-title">لوحة الإدارة</h1>
       <p class="adm-sub" id="admDate"></p>
+      <div class="adm-day"><label for="admDay" id="admDayLbl">اختيار اليوم</label><input type="date" class="input" id="admDay"></div>
     </div>
     <button type="button" class="btn btn--quiet btn--small" id="hideAdminBtn" title="يخفي زر الإدارة من هذا الجهاز">إخفاء زر الإدارة من هذا الجهاز</button>
     <button type="button" class="btn btn--quiet btn--small" id="closeAdminBtn"><svg class="ic"><use href="#i-back"/></svg>العودة للتسجيل</button>
@@ -958,7 +961,22 @@ function renderReceipt() {
   $('rNote').textContent = (action === 'حضور' ? L('يبدأ تسجيل الانصراف الساعة ' + WINDOWS['انصراف'].startAr + '. ', 'Check-out opens at ' + WINDOWS['انصراف'].startEn + '. ') : '') + L('يمكن تصوير هذه الشاشة كإثبات للتسجيل.', 'You can take a screenshot of this screen as proof of registration.');
 }
 // ===================== لوحة الإدارة =====================
-const adm = { all: [], showNid: false, query: '', onlyFlagged: false };
+const adm = { all: [], raw: [], day: '', showNid: false, query: '', onlyFlagged: false };
+// يوم السجل (بتوقيت القاهرة) من الطابع الزمني، أو من عمود التاريخ لو الطابع غير متاح
+function admRowDay(r) {
+  if (r.timestamp) return cairoDay(new Date(r.timestamp));
+  const t = String(r.dateStr || '').replace(/[\u0660-\u0669]/g, d => d.charCodeAt(0) - 0x0660).replace(/[\u06F0-\u06F9]/g, d => d.charCodeAt(0) - 0x06F0);
+  const m = t.match(/(\d{1,2})\D+(\d{1,2})\D+(\d{4})/);
+  return m ? m[3] + '-' + ('0' + m[2]).slice(-2) + '-' + ('0' + m[1]).slice(-2) : '';
+}
+function admApplyDay() {
+  const today = cairoDay(new Date());
+  if (!adm.day) adm.day = today;
+  adm.all = adm.raw.filter(r => admRowDay(r) === adm.day);
+  $('admDay').value = adm.day; $('admDay').max = today;
+  $('admDayLbl').textContent = L('اختيار اليوم', 'Select day');
+  $('admDate').textContent = dateFmt.format(new Date(adm.day + 'T12:00:00Z'));
+}
 const getKey = () => { try { return sessionStorage.getItem('dnt_admin_key') || ''; } catch (e) { return ''; } };
 const setKey = k => { try { k ? sessionStorage.setItem('dnt_admin_key', k) : sessionStorage.removeItem('dnt_admin_key'); } catch (e) {} };
 
@@ -984,7 +1002,7 @@ function openAdmin() {
 }
 function closeAdmin() {
   setKey('');
-  adm.all = []; adm.query = ''; adm.showNid = false; adm.onlyFlagged = false;        // بيانات الأعضاء تُمسح عند الخروج من الإدارة
+  adm.all = []; adm.raw = []; adm.day = ''; adm.query = ''; adm.showNid = false; adm.onlyFlagged = false;        // بيانات الأعضاء تُمسح عند الخروج من الإدارة
   $('attendanceTableBody').innerHTML = ''; $('stats').innerHTML = ''; $('searchBox').value = '';
   showView('home');
 }
@@ -1007,9 +1025,8 @@ function fetchAdminData(key, firstOpen) {
       try { localStorage.setItem('dnt_admin_device', '1'); } catch (e) {}
       showView('admin');
       if (DASHBOARD_URL) $('dashBtn').hidden = false;
-      const today = cairoDay(new Date()), legacy = new Date().toLocaleDateString('ar-EG');
-      adm.all = data.filter(r => r.timestamp ? cairoDay(new Date(r.timestamp)) === today : r.dateStr === legacy);
-      $('admDate').textContent = dateFmt.format(new Date());
+      adm.raw = data;
+      admApplyDay();
       renderAdmin();
     })
     .catch(() => {
@@ -1130,6 +1147,7 @@ $('hideAdminBtn').addEventListener('click', () => { try { localStorage.removeIte
 $('keyCancel').addEventListener('click', () => $('keyDialog').close());
 $('keyForm').addEventListener('submit', e => { e.preventDefault(); const k = $('keyInput').value.trim(); if (!k) return; $('keyDialog').close(); fetchAdminData(k, true); });
 $('refreshBtn').addEventListener('click', () => fetchAdminData());
+$('admDay').addEventListener('change', e => { adm.day = e.target.value || ''; admApplyDay(); renderAdmin(); });
 $('searchBox').addEventListener('input', e => { adm.query = e.target.value; renderAdmin(); });
 const syncNidText = () => { $('nidToggleText').textContent = adm.showNid ? L('إخفاء الأرقام القومية', 'Hide national IDs') : L('إظهار الأرقام القومية', 'Show national IDs'); };
 $('nidToggle').addEventListener('click', () => { adm.showNid = !adm.showNid; syncNidText(); renderAdmin(); });
@@ -1366,7 +1384,7 @@ function applyLang(persist) {
   if (pfErrRe && !$('pfErr').hidden) $('pfErr').textContent = pfErrRe();
   if (!$('pfGo').disabled) $('pfGoText').textContent = L('عرض ملفي', 'View my profile');
   if (pf.data) { renderInfo(pf.data); renderProfile(); }
-  if (adm.all.length || !$('adminView').hidden) { renderAdmin(); $('admDate').textContent = dateFmt.format(new Date()); }
+  if (adm.raw.length || !$('adminView').hidden) { admApplyDay(); renderAdmin(); }
 }
 
 $('langBtn').addEventListener('click', () => { LANG = LANG === 'en' ? 'ar' : 'en'; applyLang(true); });
